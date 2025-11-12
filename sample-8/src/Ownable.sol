@@ -1,11 +1,7 @@
-// FILE: contracts/Ownable.sol
+// FILE: Ownable.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/**
- * @title Ownable
- * @dev Base contract for ownership management
- */
 contract Ownable {
     address public owner;
     

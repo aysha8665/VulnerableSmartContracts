@@ -1,12 +1,13 @@
-// FILE: contracts/Treasury.sol
+// FILE: Treasury.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./Ownable.sol";
+import "./LendingPool.sol";
 
 /**
  * @title Treasury
- * @dev Secure treasury using LendingPool
+ * @dev Uses the vulnerable LendingPool
  */
 contract Treasury is Ownable {
     LendingPool public pool;
