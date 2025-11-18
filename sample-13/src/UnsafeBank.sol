@@ -3,56 +3,49 @@
 pragma solidity ^0.8.19;
 
 import "./IBank.sol";
-// import "./Logger.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol"; // Using OpenZeppelin
 
 /**
  * @title UnsafeBank
  * @dev A simple Ether bank that allows deposits and withdrawals.
- * This contract uses a Logger contract to log its actions.
+ * Inherits from Ownable to manage ownership.
  */
 contract UnsafeBank is IBank, Ownable {
     // Mapping from user address to their balance
     mapping(address => uint256) public balances;
 
-    // Address of the logging contract
-    // Logger public logger;
-
     /**
-     * @dev Deploys a new Logger contract and sets it.
+     * @dev Sets the deployer as the initial owner.
+     * This constructor now correctly calls the Ownable constructor.
      */
-    constructor() {
-        // logger = new Logger();
-        // The Ownable constructor is called implicitly
+    constructor() Ownable(msg.sender) {
+        // The deployer of UnsafeBank is set as the owner
     }
 
     /**
      * @dev Allows a user to deposit Ether.
-     * Logs the action using the Logger contract.
      */
     function deposit() external payable override {
         require(msg.value > 0, "Deposit amount must be greater than zero");
         balances[msg.sender] += msg.value;
-        // logger.logAction("Deposit");
         emit Deposit(msg.sender, msg.value);
     }
 
     /**
      * @dev Allows a user to withdraw their entire balance.
-     * Logs the action using the Logger contract.
+     * This function contains the reentrancy vulnerability.
      */
     function withdraw() external override {
         uint256 amount = balances[msg.sender];
         require(amount > 0, "No balance to withdraw");
 
-        // Send the Ether to the user
+        // Vulnerability: External call is made *before* updating the user's balance.
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "Transfer failed");
 
-        // Update the user's balance after sending
+        // State update happens *after* the external call
         balances[msg.sender] = 0;
 
-        // logger.logAction("Withdrawal");
         emit Withdrawal(msg.sender, amount);
     }
 
@@ -66,7 +59,7 @@ contract UnsafeBank is IBank, Ownable {
     }
 
     /**
-     * @dev Fallback function to receive Ether (e.g., from an attack).
+     * @dev Fallback function to receive Ether.
      */
     receive() external payable {}
 }
