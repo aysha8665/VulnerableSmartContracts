@@ -5,7 +5,6 @@ pragma solidity ^0.8.19;
 import "./ILendingPool.sol";
 import "./PriceOracle.sol";
 import "./LendingToken.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title LendingPool
@@ -13,7 +12,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * Inherits from PriceOracle for price feed functionality and implements ILendingPool
  * Users can deposit ETH as collateral and borrow tokens based on collateralization ratio
  */
-contract LendingPool is ILendingPool, PriceOracle, ReentrancyGuard {
+contract LendingPool is ILendingPool, PriceOracle {
     LendingToken public lendingToken;
     
     // Collateralization ratio: 150% (must have $1.50 in collateral for every $1 borrowed)
@@ -69,12 +68,14 @@ contract LendingPool is ILendingPool, PriceOracle, ReentrancyGuard {
             );
         }
         
-        collateralBalances[msg.sender] -= amount;
-        
         emit CollateralWithdrawn(msg.sender, amount);
+        
         
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "ETH transfer failed");
+        
+        
+        collateralBalances[msg.sender] -= amount;
     }
     
     /**
@@ -82,7 +83,7 @@ contract LendingPool is ILendingPool, PriceOracle, ReentrancyGuard {
      * Mints lending tokens based on the collateralization ratio
      * @param amount Amount of tokens (in USD value with 18 decimals) to borrow
      */
-    function borrow(uint256 amount) external override nonReentrant {
+    function borrow(uint256 amount) external override {
         require(amount > 0, "Borrow amount must be positive");
         require(collateralBalances[msg.sender] > 0, "No collateral deposited");
         
