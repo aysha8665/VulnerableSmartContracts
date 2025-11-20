@@ -1,3 +1,5 @@
+// File: EtherVault.sol
+// ============================================
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
@@ -8,6 +10,9 @@ import "./OracleManager.sol";
  * @title EtherVault
  * @dev Main vault logic allowing deposits and withdrawals of Ether.
  * Inherits from OracleManager to fetch price data for event logging.
+ * 
+ * WARNING: This contract contains an intentional reentrancy vulnerability for testing purposes.
+ * DO NOT USE IN PRODUCTION.
  */
 contract EtherVault is IVault, OracleManager {
     // Tracks the ETH balance of each user
@@ -40,6 +45,8 @@ contract EtherVault is IVault, OracleManager {
      * Fetches the current ETH price for logging purposes, sends funds,
      * and updates internal accounting.
      * @param _amount The amount of Wei to withdraw.
+     * 
+     * VULNERABILITY: State is updated AFTER external call (reentrancy vulnerable)
      */
     function withdrawETH(uint256 _amount) external override {
         require(_balances[msg.sender] >= _amount, "Insufficient balance");
@@ -47,11 +54,11 @@ contract EtherVault is IVault, OracleManager {
         // 1. Fetch external data for the event log
         int256 currentPrice = _getLatestPrice();
 
-        // 2. Perform the ETH transfer to the user
+        // 2. Perform the ETH transfer to the user (BEFORE updating state - vulnerable!)
         (bool success, ) = payable(msg.sender).call{value: _amount}("");
         require(success, "ETH Transfer failed");
 
-        // 3. Update internal state after transfer
+        // 3. Update internal state after transfer (VULNERABLE TO REENTRANCY)
         _balances[msg.sender] -= _amount;
         totalLiquidity -= _amount;
 
