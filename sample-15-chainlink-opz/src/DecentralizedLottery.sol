@@ -121,6 +121,31 @@ contract DecentralizedLottery is RandomnessConsumer, Pausable, Ownable {
     }
     
     /**
+     * @notice Manually finalizes a round with a given winner index (emergency function)
+     * @param roundNumber The round to finalize
+     * @param winnerIndex The index of the winner in the participants array
+     * @dev Allows owner to finalize round without VRF in case of VRF failure
+     */
+    function emergencyFinalizeRound(uint256 roundNumber, uint256 winnerIndex) external onlyOwner {
+        Round storage round = rounds[roundNumber];
+        require(block.timestamp > round.endTime, "Lottery still active");
+        require(!round.finalized, "Round already finalized");
+        require(round.participants.length > 0, "No participants");
+        require(winnerIndex < round.participants.length, "Invalid winner index");
+        
+        address winner = round.participants[winnerIndex];
+        round.winner = winner;
+        
+        // VULNERABILITY: External call before state change
+        vault.withdrawPrize(winner, round.prizePool);
+        
+        round.finalized = true;
+        
+        emit WinnerSelected(roundNumber, winner, round.prizePool);
+        emit RoundFinalized(roundNumber, block.timestamp);
+    }
+    
+    /**
      * @notice Processes VRF randomness to select winner and distribute prize
      * @param requestId The VRF request ID
      * @param randomness The random number from VRF
